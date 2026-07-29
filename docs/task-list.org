@@ -1,3 +1,6 @@
 * Tasks Up-Next
+** TODO improve speech rate slider
+** TODO add more voices
+** TODO add bg ambience options
 * Tasks Backlog
 * Tasks Done
