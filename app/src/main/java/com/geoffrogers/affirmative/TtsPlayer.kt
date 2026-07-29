@@ -24,8 +24,11 @@ class TtsPlayer(context: Context, private val onItemDone: () -> Unit) {
         }
     }
 
+    var speechRate: Float = 1.0f
+
     fun speak(text: String) {
         if (ready) {
+            tts?.setSpeechRate(speechRate)
             tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, UTTERANCE_ID)
         }
     }

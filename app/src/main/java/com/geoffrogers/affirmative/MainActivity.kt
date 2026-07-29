@@ -1,6 +1,8 @@
 package com.geoffrogers.affirmative
 
 import android.app.AlertDialog
+import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.widget.EditText
 import android.widget.ImageButton
@@ -9,6 +11,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.appbar.MaterialToolbar
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -53,6 +56,9 @@ class MainActivity : AppCompatActivity() {
         setupAdapter()
         setupTts()
 
+        findViewById<MaterialToolbar>(R.id.toolbar).setNavigationOnClickListener {
+            startActivity(Intent(this, SettingsActivity::class.java))
+        }
         findViewById<ImageButton>(R.id.btn_add).setOnClickListener { showDialog(null) }
         btnPlay.setOnClickListener { if (isPlaying) stopPlayback() else startPlayback() }
 
@@ -140,6 +146,12 @@ class MainActivity : AppCompatActivity() {
                 adapter.submitList(list)
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        val prefs = getSharedPreferences(SettingsActivity.PREFS_NAME, Context.MODE_PRIVATE)
+        ttsPlayer.speechRate = prefs.getFloat(SettingsActivity.KEY_SPEECH_RATE, 1.0f)
     }
 
     override fun onDestroy() {

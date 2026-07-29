@@ -10,9 +10,11 @@
         android:layout_height="wrap_content">
 
         <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-            android:title="Affirmative">
+            android:title="Affirmative"
+            app:navigationIcon="@drawable/ic_settings">
 
             <ImageButton
                 android:id="@+id/btn_add"
