@@ -19,7 +19,7 @@ class SettingsActivity : AppCompatActivity() {
         val slider = findViewById<Slider>(R.id.slider_speech_rate)
         val label = findViewById<TextView>(R.id.tv_speech_rate_value)
 
-        slider.value = prefs.getFloat(KEY_SPEECH_RATE, 1.0f)
+        slider.value = prefs.getFloat(KEY_SPEECH_RATE, 1.0f).coerceIn(slider.valueFrom, slider.valueTo)
         label.text = formatRate(slider.value)
 
         slider.addOnChangeListener { _, value, _ ->

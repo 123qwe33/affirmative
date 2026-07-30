@@ -36,9 +36,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:valueFrom="0.5"
-            android:valueTo="2.0"
-            android:stepSize="0.1"
+            android:valueFrom="0.2"
+            android:valueTo="1.4"
             android:value="1.0"
             app:labelBehavior="floating" />
 
@@ -46,7 +45,8 @@
             android:id="@+id/tv_speech_rate_value"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp" />
+            android:layout_marginTop="4dp"
+            android:textAppearance="?attr/textAppearanceTitleLarge" />
 
     </LinearLayout>
 
