@@ -29,7 +29,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Speech Rate"
-            android:textAppearance="?attr/textAppearanceTitleMedium" />
+            android:textSize="@dimen/settings_label_text_size" />
 
         <com.google.android.material.slider.Slider
             android:id="@+id/slider_speech_rate"
@@ -46,7 +46,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:textAppearance="?attr/textAppearanceTitleLarge" />
+            android:textSize="@dimen/settings_label_text_size" />
 
     </LinearLayout>
 
