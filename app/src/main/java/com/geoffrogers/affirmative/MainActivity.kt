@@ -19,7 +19,8 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var adapter: AffirmationAdapter
     private lateinit var dao: AffirmationDao
-    private lateinit var ttsPlayer: TtsPlayer
+    private var ttsPlayer: TtsPlayer? = null
+    private var coquiEngine: CoquiTtsEngine? = null
     private lateinit var btnPlay: ImageButton
 
     private var isPlaying = false
@@ -55,6 +56,7 @@ class MainActivity : AppCompatActivity() {
 
         setupAdapter()
         setupTts()
+        refreshVoiceEngine()
 
         findViewById<MaterialToolbar>(R.id.toolbar).setNavigationOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
@@ -88,14 +90,36 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupTts() {
-        ttsPlayer = TtsPlayer(this) {
-            runOnUiThread {
-                if (isPlaying && currentList.isNotEmpty()) {
-                    currentIndex = (currentIndex + 1) % currentList.size
-                    ttsPlayer.speak(currentList[currentIndex].text)
-                }
-            }
+        ttsPlayer = TtsPlayer(this) { runOnUiThread { advance() } }
+    }
+
+    private fun refreshVoiceEngine() {
+        val prefs = getSharedPreferences(SettingsActivity.PREFS_NAME, Context.MODE_PRIVATE)
+        ttsPlayer?.speechRate = prefs.getFloat(SettingsActivity.KEY_SPEECH_RATE, 1.0f)
+
+        val voiceId = prefs.getString(SettingsActivity.KEY_VOICE_ID, "system") ?: "system"
+        val model = VoiceModel.CATALOG.firstOrNull { it.id == voiceId }
+
+        val downloadMgr = ModelDownloadManager(this)
+        if (model != null && model.id != "system" && downloadMgr.isModelReady(model)) {
+            coquiEngine?.shutdown()
+            coquiEngine = CoquiTtsEngine(downloadMgr.modelDir(model.id), model)
+        } else {
+            coquiEngine?.shutdown()
+            coquiEngine = null
         }
+    }
+
+    private fun advance() {
+        if (isPlaying && currentList.isNotEmpty()) {
+            currentIndex = (currentIndex + 1) % currentList.size
+            speak(currentList[currentIndex].text)
+        }
+    }
+
+    private fun speak(text: String) {
+        coquiEngine?.speak(text, ttsPlayer?.speechRate ?: 1.0f) { runOnUiThread { advance() } }
+            ?: ttsPlayer?.speak(text)
     }
 
     private fun startPlayback() {
@@ -103,12 +127,13 @@ class MainActivity : AppCompatActivity() {
         isPlaying = true
         currentIndex = 0
         btnPlay.setImageResource(android.R.drawable.ic_media_pause)
-        ttsPlayer.speak(currentList[currentIndex].text)
+        speak(currentList[currentIndex].text)
     }
 
     private fun stopPlayback() {
         isPlaying = false
-        ttsPlayer.stop()
+        ttsPlayer?.stop()
+        coquiEngine?.stop()
         btnPlay.setImageResource(android.R.drawable.ic_media_play)
     }
 
@@ -150,12 +175,12 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        val prefs = getSharedPreferences(SettingsActivity.PREFS_NAME, Context.MODE_PRIVATE)
-        ttsPlayer.speechRate = prefs.getFloat(SettingsActivity.KEY_SPEECH_RATE, 1.0f)
+        refreshVoiceEngine()
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        ttsPlayer.shutdown()
+        ttsPlayer?.shutdown()
+        coquiEngine?.shutdown()
     }
 }

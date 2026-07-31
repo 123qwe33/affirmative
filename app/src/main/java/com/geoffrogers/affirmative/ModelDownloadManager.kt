@@ -20,6 +20,10 @@ class ModelDownloadManager(private val context: Context) {
     fun isModelReady(model: VoiceModel): Boolean =
         File(modelDir(model.id), model.onnxFileName).exists()
 
+    fun deleteModel(model: VoiceModel) {
+        modelDir(model.id).deleteRecursively()
+    }
+
     fun startDownload(model: VoiceModel): Long {
         val request = DownloadManager.Request(Uri.parse(model.downloadUrl))
             .setTitle(model.displayName)

@@ -93,7 +93,15 @@ class SettingsActivity : AppCompatActivity() {
                     downloadMgr.cancelDownload(model.id)
                     updateModelState(model.id, VoiceModelState.NOT_DOWNLOADED)
                 }
-                VoiceModelState.READY -> {}
+                VoiceModelState.READY -> {
+                    downloadMgr.deleteModel(model)
+                    updateModelState(model.id, VoiceModelState.NOT_DOWNLOADED)
+                    val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                    if (prefs.getString(KEY_VOICE_ID, "system") == model.id) {
+                        prefs.edit().putString(KEY_VOICE_ID, "system").apply()
+                        voiceSpinner.setSelection(0)
+                    }
+                }
             }
         }
 

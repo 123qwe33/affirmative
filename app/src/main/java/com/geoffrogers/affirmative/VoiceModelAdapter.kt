@@ -57,7 +57,9 @@ class VoiceModelAdapter(
             }
             VoiceModelState.READY -> {
                 holder.name.alpha = 1.0f
-                holder.action.visibility = View.GONE
+                holder.action.setImageResource(android.R.drawable.ic_menu_delete)
+                holder.action.visibility = View.VISIBLE
+                holder.action.setOnClickListener { onActionClick(model) }
                 holder.progressBar.visibility = View.GONE
             }
         }
