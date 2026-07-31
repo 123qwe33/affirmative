@@ -1,7 +1,10 @@
 * Tasks Up-Next
-** TODO add more voices
-** TODO add bg ambience options
+** TODO Add configurable pause between affirmations
+** TODO Add more voice options
 * Tasks Backlog
+** TODO add bg ambience options
 * Tasks Done
 ** DONE improve speech rate slider
 CLOSED: [2026-07-31 Fri 16:36]
+** DONE add more voices
+CLOSED: [2026-07-31 Fri 18:38]
