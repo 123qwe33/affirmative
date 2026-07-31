@@ -8,12 +8,23 @@ import android.widget.ArrayAdapter
 import android.widget.Spinner
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.slider.Slider
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class SettingsActivity : AppCompatActivity() {
+
+    private lateinit var downloadMgr: ModelDownloadManager
+    private lateinit var voiceModelAdapter: VoiceModelAdapter
+    private val liveModels: MutableList<VoiceModel> = mutableListOf()
+    private lateinit var spinnerAdapter: ArrayAdapter<String>
+    private lateinit var voiceSpinner: Spinner
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -33,9 +44,19 @@ class SettingsActivity : AppCompatActivity() {
             prefs.edit().putFloat(KEY_SPEECH_RATE, value).apply()
         }
 
-        val spinner = findViewById<Spinner>(R.id.spinner_voice)
-        val names = VoiceModel.CATALOG.map { it.displayName }
-        val adapter = object : ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, names) {
+        downloadMgr = ModelDownloadManager(this)
+
+        // Build live model list, upgrading state for already-downloaded models
+        liveModels.addAll(VoiceModel.CATALOG.map { model ->
+            if (model.onnxFileName.isNotEmpty() && downloadMgr.isModelReady(model))
+                model.copy(state = VoiceModelState.READY)
+            else
+                model
+        })
+
+        voiceSpinner = findViewById(R.id.spinner_voice)
+        val names = liveModels.map { it.displayName }
+        spinnerAdapter = object : ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, names) {
             override fun getView(position: Int, convertView: View?, parent: ViewGroup): View =
                 super.getView(position, convertView, parent).also { applyAlpha(it, position) }
 
@@ -43,28 +64,73 @@ class SettingsActivity : AppCompatActivity() {
                 super.getDropDownView(position, convertView, parent).also { applyAlpha(it, position) }
 
             private fun applyAlpha(view: View, position: Int) {
-                view.alpha = if (VoiceModel.CATALOG[position].state == VoiceModelState.NOT_DOWNLOADED) 0.5f else 1.0f
+                view.alpha = if (liveModels[position].state == VoiceModelState.NOT_DOWNLOADED) 0.5f else 1.0f
             }
         }
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        spinner.adapter = adapter
+        spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        voiceSpinner.adapter = spinnerAdapter
 
         val savedId = prefs.getString(KEY_VOICE_ID, "system")
-        val savedIndex = VoiceModel.CATALOG.indexOfFirst { it.id == savedId }.takeIf { it >= 0 } ?: 0
-        spinner.setSelection(savedIndex)
+        val savedIndex = liveModels.indexOfFirst { it.id == savedId }.takeIf { it >= 0 } ?: 0
+        voiceSpinner.setSelection(savedIndex)
 
-        spinner.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
+        voiceSpinner.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: android.widget.AdapterView<*>, view: View?, position: Int, id: Long) {
-                prefs.edit().putString(KEY_VOICE_ID, VoiceModel.CATALOG[position].id).apply()
+                prefs.edit().putString(KEY_VOICE_ID, liveModels[position].id).apply()
             }
             override fun onNothingSelected(parent: android.widget.AdapterView<*>) {}
         }
 
+        val downloadableModels = liveModels.filter { it.id != "system" }.toMutableList()
+        voiceModelAdapter = VoiceModelAdapter(downloadableModels) { model ->
+            when (model.state) {
+                VoiceModelState.NOT_DOWNLOADED -> {
+                    downloadMgr.startDownload(model)
+                    updateModelState(model.id, VoiceModelState.DOWNLOADING, 0)
+                    startPolling(model)
+                }
+                VoiceModelState.DOWNLOADING -> {
+                    downloadMgr.cancelDownload(model.id)
+                    updateModelState(model.id, VoiceModelState.NOT_DOWNLOADED)
+                }
+                VoiceModelState.READY -> {}
+            }
+        }
+
         val rv = findViewById<RecyclerView>(R.id.rv_voice_models)
         rv.layoutManager = LinearLayoutManager(this)
-        rv.adapter = VoiceModelAdapter(
-            VoiceModel.CATALOG.filter { it.id != "system" }
-        ) { _ -> }
+        rv.adapter = voiceModelAdapter
+    }
+
+    private fun updateModelState(modelId: String, state: VoiceModelState, progressPct: Int = 0) {
+        val index = liveModels.indexOfFirst { it.id == modelId }
+        if (index >= 0) liveModels[index] = liveModels[index].copy(state = state)
+        voiceModelAdapter.updateState(modelId, state, progressPct)
+        spinnerAdapter.notifyDataSetChanged()
+    }
+
+    private fun startPolling(model: VoiceModel) {
+        lifecycleScope.launch {
+            while (true) {
+                delay(500)
+                val pct = downloadMgr.getProgress(model.id)
+                if (pct == -1) {
+                    withContext(Dispatchers.Main) {
+                        updateModelState(model.id, VoiceModelState.DOWNLOADING, 100)
+                    }
+                    downloadMgr.extractArchive(model)
+                    withContext(Dispatchers.Main) {
+                        updateModelState(model.id, VoiceModelState.READY)
+                        voiceSpinner.adapter?.let { spinnerAdapter.notifyDataSetChanged() }
+                    }
+                    break
+                } else {
+                    withContext(Dispatchers.Main) {
+                        updateModelState(model.id, VoiceModelState.DOWNLOADING, pct)
+                    }
+                }
+            }
+        }
     }
 
     private fun formatRate(value: Float) = "%.1fx".format(value)
