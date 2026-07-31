@@ -33,6 +33,8 @@ class ModelDownloadManager(private val context: Context) {
         activeDownloads.remove(modelId)
     }
 
+    fun isDownloadActive(modelId: String): Boolean = activeDownloads.containsKey(modelId)
+
     fun getProgress(modelId: String): Int {
         val downloadId = activeDownloads[modelId] ?: return -1
         val query = DownloadManager.Query().setFilterById(downloadId)
@@ -56,12 +58,16 @@ class ModelDownloadManager(private val context: Context) {
                 TarArchiveInputStream(bz2In).use { tarIn ->
                     var entry = tarIn.nextEntry
                     while (entry != null) {
-                        val outFile = File(outDir, entry.name)
-                        if (entry.isDirectory) {
-                            outFile.mkdirs()
-                        } else {
-                            outFile.parentFile?.mkdirs()
-                            outFile.outputStream().use { tarIn.copyTo(it) }
+                        // Strip the top-level archive directory (e.g. "vits-piper-en_US-amy-low/")
+                        val relativeName = entry.name.substringAfter('/')
+                        if (relativeName.isNotEmpty()) {
+                            val outFile = File(outDir, relativeName)
+                            if (entry.isDirectory) {
+                                outFile.mkdirs()
+                            } else {
+                                outFile.parentFile?.mkdirs()
+                                outFile.outputStream().use { tarIn.copyTo(it) }
+                            }
                         }
                         entry = tarIn.nextEntry
                     }

@@ -115,6 +115,7 @@ class SettingsActivity : AppCompatActivity() {
                 delay(500)
                 val pct = downloadMgr.getProgress(model.id)
                 if (pct == -1) {
+                    if (!downloadMgr.isDownloadActive(model.id)) break
                     withContext(Dispatchers.Main) {
                         updateModelState(model.id, VoiceModelState.DOWNLOADING, 100)
                     }
