@@ -3,7 +3,6 @@ package com.geoffrogers.affirmative
 import android.content.Context
 import android.os.Bundle
 import android.view.View
-import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.Spinner
 import android.widget.TextView
@@ -23,6 +22,7 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var downloadMgr: ModelDownloadManager
     private lateinit var voiceModelAdapter: VoiceModelAdapter
     private val liveModels: MutableList<VoiceModel> = mutableListOf()
+    private val spinnerModels: MutableList<VoiceModel> = mutableListOf()
     private lateinit var spinnerAdapter: ArrayAdapter<String>
     private lateinit var voiceSpinner: Spinner
 
@@ -55,28 +55,18 @@ class SettingsActivity : AppCompatActivity() {
         })
 
         voiceSpinner = findViewById(R.id.spinner_voice)
-        val names = liveModels.map { it.displayName }
-        spinnerAdapter = object : ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, names) {
-            override fun getView(position: Int, convertView: View?, parent: ViewGroup): View =
-                super.getView(position, convertView, parent).also { applyAlpha(it, position) }
-
-            override fun getDropDownView(position: Int, convertView: View?, parent: ViewGroup): View =
-                super.getDropDownView(position, convertView, parent).also { applyAlpha(it, position) }
-
-            private fun applyAlpha(view: View, position: Int) {
-                view.alpha = if (liveModels[position].state == VoiceModelState.NOT_DOWNLOADED) 0.5f else 1.0f
-            }
-        }
+        spinnerModels.addAll(liveModels.filter { it.state == VoiceModelState.READY })
+        spinnerAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, spinnerModels.map { it.displayName }.toMutableList())
         spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         voiceSpinner.adapter = spinnerAdapter
 
         val savedId = prefs.getString(KEY_VOICE_ID, "system")
-        val savedIndex = liveModels.indexOfFirst { it.id == savedId }.takeIf { it >= 0 } ?: 0
+        val savedIndex = spinnerModels.indexOfFirst { it.id == savedId }.takeIf { it >= 0 } ?: 0
         voiceSpinner.setSelection(savedIndex)
 
         voiceSpinner.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: android.widget.AdapterView<*>, view: View?, position: Int, id: Long) {
-                prefs.edit().putString(KEY_VOICE_ID, liveModels[position].id).apply()
+                prefs.edit().putString(KEY_VOICE_ID, spinnerModels[position].id).apply()
             }
             override fun onNothingSelected(parent: android.widget.AdapterView<*>) {}
         }
@@ -112,9 +102,21 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun updateModelState(modelId: String, state: VoiceModelState, progressPct: Int = 0) {
         val index = liveModels.indexOfFirst { it.id == modelId }
-        if (index >= 0) liveModels[index] = liveModels[index].copy(state = state)
+        if (index < 0) return
+        val model = liveModels[index].copy(state = state)
+        liveModels[index] = model
         voiceModelAdapter.updateState(modelId, state, progressPct)
-        spinnerAdapter.notifyDataSetChanged()
+
+        if (state == VoiceModelState.READY && spinnerModels.none { it.id == modelId }) {
+            spinnerModels.add(model)
+            spinnerAdapter.add(model.displayName)
+        } else if (state != VoiceModelState.READY) {
+            val spinnerIndex = spinnerModels.indexOfFirst { it.id == modelId }
+            if (spinnerIndex >= 0) {
+                spinnerAdapter.remove(spinnerModels[spinnerIndex].displayName)
+                spinnerModels.removeAt(spinnerIndex)
+            }
+        }
     }
 
     private fun startPolling(model: VoiceModel) {
@@ -130,7 +132,6 @@ class SettingsActivity : AppCompatActivity() {
                     downloadMgr.extractArchive(model)
                     withContext(Dispatchers.Main) {
                         updateModelState(model.id, VoiceModelState.READY)
-                        voiceSpinner.adapter?.let { spinnerAdapter.notifyDataSetChanged() }
                     }
                     break
                 } else {
