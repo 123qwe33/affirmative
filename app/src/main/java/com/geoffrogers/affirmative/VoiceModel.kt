@@ -8,7 +8,8 @@ data class VoiceModel(
     val state: VoiceModelState,
     val downloadUrl: String = "",
     val onnxFileName: String = "",
-    val configFileName: String = ""
+    val configFileName: String = "",
+    val fileSizeBytes: Long = 0L
 ) {
     companion object {
         val CATALOG = listOf(
@@ -19,7 +20,8 @@ data class VoiceModel(
                 state = VoiceModelState.NOT_DOWNLOADED,
                 downloadUrl = "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-en_US-amy-low.tar.bz2",
                 onnxFileName = "en_US-amy-low.onnx",
-                configFileName = "en_US-amy-low.onnx.json"
+                configFileName = "en_US-amy-low.onnx.json",
+                fileSizeBytes = 67_095_344L
             ),
             VoiceModel(
                 id = "piper-lessac-low",
@@ -27,7 +29,8 @@ data class VoiceModel(
                 state = VoiceModelState.NOT_DOWNLOADED,
                 downloadUrl = "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-en_US-lessac-low.tar.bz2",
                 onnxFileName = "en_US-lessac-low.onnx",
-                configFileName = "en_US-lessac-low.onnx.json"
+                configFileName = "en_US-lessac-low.onnx.json",
+                fileSizeBytes = 67_097_098L
             ),
             VoiceModel(
                 id = "piper-ryan-low",
@@ -35,7 +38,8 @@ data class VoiceModel(
                 state = VoiceModelState.NOT_DOWNLOADED,
                 downloadUrl = "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-en_US-ryan-low.tar.bz2",
                 onnxFileName = "en_US-ryan-low.onnx",
-                configFileName = "en_US-ryan-low.onnx.json"
+                configFileName = "en_US-ryan-low.onnx.json",
+                fileSizeBytes = 67_100_179L
             )
         )
     }

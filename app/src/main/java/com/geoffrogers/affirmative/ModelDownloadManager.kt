@@ -13,6 +13,7 @@ class ModelDownloadManager(private val context: Context) {
 
     private val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
     private val activeDownloads = mutableMapOf<String, Long>()
+    private val knownSizes = mutableMapOf<String, Long>()
 
     fun modelDir(modelId: String): File = File(context.filesDir, "models/$modelId")
 
@@ -25,6 +26,7 @@ class ModelDownloadManager(private val context: Context) {
             .setDestinationInExternalFilesDir(context, null, "${model.id}.tar.bz2")
         val downloadId = downloadManager.enqueue(request)
         activeDownloads[model.id] = downloadId
+        knownSizes[model.id] = model.fileSizeBytes
         return downloadId
     }
 
@@ -44,7 +46,8 @@ class ModelDownloadManager(private val context: Context) {
             val status = it.getInt(it.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))
             if (status == DownloadManager.STATUS_SUCCESSFUL) return -1
             val downloaded = it.getLong(it.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR))
-            val total = it.getLong(it.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES))
+            val reported = it.getLong(it.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES))
+            val total = if (reported > 0) reported else knownSizes[modelId] ?: 0L
             if (total <= 0) 0 else ((downloaded * 100L) / total).toInt()
         }
     }
