@@ -1,6 +1,5 @@
 * Tasks Up-Next
 ** TODO Add configurable pause between affirmations
-** TODO Add more voice options
 * Tasks Backlog
 ** TODO add bg ambience options
 * Tasks Done
@@ -8,3 +7,5 @@
 CLOSED: [2026-07-31 Fri 16:36]
 ** DONE add more voices
 CLOSED: [2026-07-31 Fri 18:38]
+** DONE Add more voice options
+CLOSED: [2026-07-31 Fri 19:43]
